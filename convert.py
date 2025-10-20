@@ -32,6 +32,7 @@ def process_item(item, folders):
             - password: The password associated with the item (empty string if not applicable).
             - url: The URL associated with the item (empty string if not applicable).
             - notes: Additional notes associated with the item.
+            - totp: TOTP URI / Code associated with the item (empty string if not applicable).
     """
     group = folders.get(item.get("folderId"), "Imported")
     title = item.get("name", "")
@@ -40,6 +41,9 @@ def process_item(item, folders):
     )
     password = (
         item.get("login", {}).get("password", "") if item.get("type") == 1 else ""
+    )
+    totp = (
+        item.get("login", {}).get("totp", "") if item.get("type") == 1 else ""
     )
     url = (
         item.get("login", {}).get("uris", [{}])[0].get("uri", "")
@@ -59,7 +63,7 @@ def process_item(item, folders):
         card = item.get("card", {})
         notes += f"\nCard Number: {card.get('number', '')}\nExpiry: {card.get('expMonth', '')}/{card.get('expYear', '')}"
 
-    return [group, title, username, password, url, notes]
+    return [group, title, username, password, url, notes, totp]
 
 def convert(bw_file):
     """
@@ -79,9 +83,11 @@ def convert(bw_file):
         items = data.get("items", [])
 
         with open(csv_path, "w", newline="", encoding="utf-8") as csv_file:
-            csv_writer = csv.writer(csv_file)
+            # Quoting all fields to ensure escaping 
+            # special characters in fields like passwords etc.
+            csv_writer = csv.writer(csv_file, quoting=csv.QUOTE_ALL)
             csv_writer.writerow(
-                ["Group", "Title", "Username", "Password", "URL", "Notes"]
+                ["Group", "Title", "Username", "Password", "URL", "Notes", "TOTP"]
             )
             for item in items:
                 csv_writer.writerow(process_item(item, folders))
